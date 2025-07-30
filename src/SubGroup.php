@@ -12,11 +12,11 @@ class SubGroup
 
     /**
      * @param string $name
-     * @param array  $arguments
+     * @param array  $args
      * @return mixed
      * @throws
      */
-    public function __call(string $name, array $arguments)
+    public function __call(string $name, array $args)
     {
         $name = ucfirst($name);
 

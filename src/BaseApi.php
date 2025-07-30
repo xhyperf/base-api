@@ -15,12 +15,13 @@ class BaseApi
 
     public static function __callStatic(string $name, array $args)
     {
-        $name = ucfirst($name);
+        $name  = ucfirst($name);
+        $entry = $args[0] ?? 'default';
 
-        if (isset(static::$container[$name])) {
-            return static::$container[$name];
+        if (isset(static::$container[$name][$entry])) {
+            return static::$container[$name][$entry];
         }
 
-        return static::$container[$name] = make(Str::beforeLast(static::class, '\\') . '\\Api\\' . $name);
+        return static::$container[$name][$entry] = make(Str::beforeLast(static::class, '\\') . '\\Api\\' . $name, compact('entry'));
     }
 }
