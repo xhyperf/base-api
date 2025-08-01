@@ -44,7 +44,25 @@ class BaseClient
      */
     protected array $configExt = [];
 
-    protected function getConfig($setting): array
+    /**
+     * 设置扩展配置
+     * @param string $key   配置名
+     * @param mixed  $value 配置值
+     * @return $this
+     */
+    public function setConfig(string $key, mixed $value): static
+    {
+        Arr::set($this->configExt, $key, $value);
+
+        return $this;
+    }
+
+    /**
+     * 获取完整配置
+     * @param string|array $setting 请求级配置
+     * @return array
+     */
+    protected function getConfig(string|array $setting): array
     {
         if (is_string($setting)) {
             $setting = ['method' => $setting];
@@ -55,7 +73,7 @@ class BaseClient
 
     /**
      * 发送请求
-     * @param array|string $setting 配置
+     * @param array|string $setting 请求级配置
      * @param array        $post    POST数据
      * @return mixed
      * @throws
