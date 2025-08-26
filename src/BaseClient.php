@@ -112,7 +112,12 @@ class BaseClient
             return $response;
         }
 
-        $res = json_decode($response, true);
+        [$ok, $res] = $this->decode($response);
+
+        // 解析失败，返回原始数据
+        if (! $ok) {
+            return $response;
+        }
 
         // 异常处理
         if ($conf['throw'] !== false && ($exception || $this->isThrow($res, $conf))) {
@@ -150,6 +155,20 @@ class BaseClient
         }
 
         return (string)$response;
+    }
+
+    /**
+     * 解析返回数据
+     * @param string $response 响应数据
+     * @return array [是否成功, 解析后的数据]
+     */
+    protected function decode(string $response): array
+    {
+        if (! json_validate($response)) {
+            return [false, null];
+        }
+
+        return [true, json_decode($response, true)];
     }
 
     protected function parse($string, $conf = [])
