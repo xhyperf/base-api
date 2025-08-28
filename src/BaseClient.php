@@ -114,8 +114,8 @@ class BaseClient
 
         [$ok, $res] = $this->decode($response);
 
-        // 解析失败，返回原始数据
-        if (! $ok) {
+        // 解析失败，且没有异常抛出，返回原始数据
+        if (! $ok && $exception === false) {
             return $response;
         }
 
