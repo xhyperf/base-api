@@ -18,6 +18,7 @@
     "require": {
         "php": ">=8.1",
         "hyperf/context": "~3.1",
+        "hyperf/Collection": "~3.1",
         "xhyperf/invoker": "*"
     },
     "suggest": {
