@@ -15,8 +15,8 @@ use function Hyperf\Support\call;
 
 class BaseClient
 {
-    /** @var ?StrategyType 注解调用事件名 */
-    protected const ?StrategyType STRATEGY_TYPE = null;
+    /** @var string|StrategyType 注解调用事件名 */
+    protected const string STRATEGY_TYPE = '';
 
     const string API_URI = '';
 
@@ -188,7 +188,7 @@ class BaseClient
         return preg_replace_callback('/\${([^{}]*)}/', function ($match) use ($conf) {
             $match = $match[1];
 
-            if (static::STRATEGY_TYPE && ($result = Invoker::reflect(static::STRATEGY_TYPE::tryFrom($match), $conf + ['caller' => $this]))) {
+            if (static::STRATEGY_TYPE && ($result = Invoker::strategy(static::STRATEGY_TYPE::tryFrom($match), $conf + ['caller' => $this]))) {
                 return $result;
             }
 
