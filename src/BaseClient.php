@@ -81,30 +81,9 @@ class BaseClient
     protected function send(array|string $setting, array $post = []): mixed
     {
         $conf = $this->getConfig($setting);
-        $uri  = $conf['uri'] = $this->parse($conf['uri'], $conf);
 
-        $option = [
-            'headers' => $conf['headers'] ? $this->parse($conf['headers'], $conf) : [],
-        ];
+        [$uri, $option] = $this->buildRequestArgs($conf, $post);
 
-        if ($post) {
-            $post = $this->parse($post, $conf);
-            if (strtoupper($conf['type']) == 'GET') {
-                $uri .= (strpos($uri, '?') ? '&' : '?') . http_build_query($post);
-            } elseif (! empty($conf['multipart'])) {
-                foreach ($post as $key => $val) {
-                    $conf['multipart'][] = [
-                        'name'     => $key,
-                        'contents' => $val,
-                    ];
-                }
-            } else {
-                $option['json'] = $post;
-            }
-        }
-
-        // multipart/form-data 及 x-www-form-urlencoded 表单
-        $option   += Arr::only($conf, ['multipart', 'form_params']);
         $response = $this->request($conf['type'], $uri, $option, $exception);
 
         //不用解析返回数据
@@ -132,6 +111,42 @@ class BaseClient
         }
 
         return Arr::get($res, $conf['returnField']);
+    }
+
+    /**
+     * 构建请求参数
+     * @param array $conf 配置
+     * @param array $post POST数据
+     * @return array
+     */
+    protected function buildRequestArgs(array $conf, array $post): array
+    {
+        $uri = $conf['uri'] = $this->parse($conf['uri'], $conf);
+
+        $option = [
+            'headers' => $conf['headers'] ? $this->parse($conf['headers'], $conf) : [],
+        ];
+
+        if ($post) {
+            $post = $this->parse($post, $conf);
+            if (strtoupper($conf['type']) == 'GET') {
+                $uri .= (strpos($uri, '?') ? '&' : '?') . http_build_query($post);
+            } elseif (! empty($conf['multipart'])) {
+                foreach ($post as $key => $val) {
+                    $conf['multipart'][] = [
+                        'name'     => $key,
+                        'contents' => $val,
+                    ];
+                }
+            } else {
+                $option['json'] = $post;
+            }
+        }
+
+        // multipart/form-data 及 x-www-form-urlencoded 表单
+        $option += Arr::only($conf, ['multipart', 'form_params']);
+
+        return [$uri, $option];
     }
 
     /**
