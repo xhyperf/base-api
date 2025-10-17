@@ -7,6 +7,7 @@ use Hyperf\Collection\Arr;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Guzzle\ClientFactory;
 
+use XHyperf\BaseApi\Constant\ConfigKey;
 use XHyperf\BaseApi\Exception\ApiException;
 use XHyperf\Invoker\Invoker;
 use XHyperf\Invoker\StrategyType;
@@ -24,19 +25,21 @@ class BaseClient
      * @var array 基本配置
      */
     protected array $config = [
-        'uri'         => '${API_URI}${method}',
-        'type'        => 'POST',
-        'headers'     => [
+        ConfigKey::URI          => '${API_URI}${method}',
+        ConfigKey::TYPE         => 'POST',
+        ConfigKey::HEADERS      => [
             'Accept' => 'application/json',
         ],
-        'format'      => 'json_encode', //自动格式化 POST 数据
-        'decode'      => true,          // 是否解析返回数据
-        'returnField' => null,          // 默认返回字段，null 返回整个数组
-        'errKey'      => null,          // 判断错误请求的键
-        'errVal'      => null,          // 判断错误请求的值
-        'errMsg'      => '',            // 错误提示信息取值
-        'throw'       => true,          // 是否直接抛出异常
-        'onError'     => null,          // 错误回调
+        ConfigKey::FORMAT       => 'json',  // 自动格式化 POST 数据
+        ConfigKey::DECODE       => true,    // 是否解析返回数据
+        ConfigKey::RETURN_FIELD => null,    // 默认返回字段，null 返回整个数组
+        ConfigKey::SUCCESS_KEY  => '',      // 判断成功响应的键
+        ConfigKey::SUCCESS_VAL  => '',      // 判断成功响应的值，需要与成功键同时配置
+        ConfigKey::ERR_KEY      => '',      // 判断错误响应的键，优先判断错误配置，再判断成功配置
+        ConfigKey::ERR_VAL      => '',      // 判断错误响应的值，未配置时，只要响应体包含错误键即为错误响应
+        ConfigKey::ERR_MSG      => '',      // 错误提示信息取键
+        ConfigKey::THROW        => true,    // 是否直接抛出异常
+        ConfigKey::ON_ERROR     => null,    // 错误回调
     ];
 
     /**
@@ -84,10 +87,10 @@ class BaseClient
 
         [$uri, $option] = $this->buildRequestArgs($conf, $post);
 
-        $response = $this->request($conf['type'], $uri, $option, $exception);
+        $response = $this->request($conf[ConfigKey::TYPE], $uri, $option, $exception);
 
         //不用解析返回数据
-        if (! $conf['decode']) {
+        if (! $conf[ConfigKey::DECODE]) {
             return $response;
         }
 
@@ -99,18 +102,18 @@ class BaseClient
         }
 
         // 异常处理
-        if ($conf['throw'] !== false && ($exception || $this->isThrow($res, $conf))) {
+        if ($conf[ConfigKey::THROW] !== false && ($exception || $this->isThrow($res, $conf))) {
             // 配置有错误回调
-            if (is_callable(Arr::get($conf, 'onError'))) {
-                $temp = call($conf['onError'], [$res, $conf, func_get_args()]);
+            if (is_callable(Arr::get($conf, ConfigKey::ON_ERROR))) {
+                $temp = call($conf[ConfigKey::ON_ERROR], [$res, $conf, func_get_args()]);
                 if ($temp !== false) {
                     return $temp;
                 }
             }
-            $this->exception(Arr::get($res, $conf['errMsg'], ''), $res);
+            $this->exception(Arr::get($res, $conf[ConfigKey::ERR_MSG], ''), $res);
         }
 
-        return Arr::get($res, $conf['returnField']);
+        return Arr::get($res, $conf[ConfigKey::RETURN_FIELD]);
     }
 
     /**
@@ -121,15 +124,15 @@ class BaseClient
      */
     protected function buildRequestArgs(array $conf, array $post): array
     {
-        $uri = $conf['uri'] = $this->parse($conf['uri'], $conf);
+        $uri = $conf[ConfigKey::URI] = $this->parse($conf[ConfigKey::URI], $conf);
 
         $option = [
-            'headers' => $conf['headers'] ? $this->parse($conf['headers'], $conf) : [],
+            'headers' => $conf[ConfigKey::HEADERS] ? $this->parse($conf[ConfigKey::HEADERS], $conf) : [],
         ];
 
         if ($post) {
             $post = $this->parse($post, $conf);
-            if (strtoupper($conf['type']) == 'GET') {
+            if (strtoupper($conf[ConfigKey::TYPE]) == 'GET') {
                 $uri .= (strpos($uri, '?') ? '&' : '?') . http_build_query($post);
             } elseif (! empty($conf['multipart'])) {
                 foreach ($post as $key => $val) {
@@ -227,16 +230,19 @@ class BaseClient
 
     protected function isThrow($res, $conf): bool
     {
-        if (is_callable($conf['throw'])) {
-            return call($conf['throw'], [$res, $conf]);
+        if (is_callable($conf[ConfigKey::THROW])) {
+            return call($conf[ConfigKey::THROW], [$res, $conf]);
         }
 
         // 有配置判断错误请求的值，那判断响应 key 是否和错误值相等，否则只需要有错误 key 就错有错
-        if (! empty($conf['errKey']) && (is_null(Arr::get($conf, 'errVal')) ? Arr::get($res, $conf['errKey']) : Arr::get($res, $conf['errKey']) == $conf['errVal'])) {
+        if (! empty($conf[ConfigKey::ERR_KEY])
+            && (empty($conf[ConfigKey::ERR_VAL])
+                ? Arr::get($res, $conf[ConfigKey::ERR_KEY])
+                : Arr::get($res, $conf[ConfigKey::ERR_KEY]) == $conf[ConfigKey::ERR_VAL])) {
             return true;
         }
 
-        return ! empty($conf['successKey']) && Arr::get($res, $conf['successKey']) != $conf['successVal'];
+        return ! empty($conf[ConfigKey::SUCCESS_KEY]) && Arr::get($res, $conf[ConfigKey::SUCCESS_KEY]) != $conf[ConfigKey::SUCCESS_VAL];
     }
 
     protected function getData(string $method, ...$args): mixed
